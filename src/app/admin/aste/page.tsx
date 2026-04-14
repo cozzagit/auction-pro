@@ -35,10 +35,18 @@ export default async function AdminAuctionsPage() {
   const byStatus: Record<string, number> = {};
   let totalBudget = 0;
   let totalRevenue = 0;
+  let estimatedRevenue = 0;
   for (const a of allAuctions) {
     byStatus[a.status] = (byStatus[a.status] || 0) + 1;
     totalBudget += a.maxBudget;
-    if (a.platformFee) totalRevenue += a.platformFee;
+    if (a.platformFee) {
+      totalRevenue += a.platformFee;
+    } else if (a.lowestBid && ['active', 'awarded', 'in_progress'].includes(a.status)) {
+      // Estimated: (budget + lowestBid) / 2 * 6%
+      const estFinal = Math.round((a.maxBudget + a.lowestBid) / 2);
+      const estFee = Math.round(estFinal * 0.06);
+      estimatedRevenue += estFee;
+    }
   }
 
   return (
@@ -48,6 +56,8 @@ export default async function AdminAuctionsPage() {
         <div className="flex items-center gap-4 text-sm">
           <span className="text-[var(--muted)]">Volume: {formatCurrency(totalBudget)}</span>
           {totalRevenue > 0 && <span className="font-bold text-emerald-600">Revenue: {formatCurrency(totalRevenue)}</span>}
+          {estimatedRevenue > 0 && <span className="text-gray-400">+ {formatCurrency(estimatedRevenue)} stimata</span>}
+          {(totalRevenue > 0 || estimatedRevenue > 0) && <span className="font-semibold text-[var(--foreground)]">Totale previsto: {formatCurrency(totalRevenue + estimatedRevenue)}</span>}
         </div>
       </div>
 
@@ -119,6 +129,11 @@ export default async function AdminAuctionsPage() {
                         <div>
                           <span className="font-mono text-xs font-bold text-emerald-600">{formatCurrency(a.platformFee)}</span>
                           {a.finalAmount && <div className="text-[10px] text-[var(--muted)]">su {formatCurrency(a.finalAmount)}</div>}
+                        </div>
+                      ) : a.lowestBid && ['active', 'awarded', 'in_progress'].includes(a.status) ? (
+                        <div>
+                          <span className="font-mono text-xs text-gray-400">{formatCurrency(Math.round(Math.round((a.maxBudget + a.lowestBid) / 2) * 0.06))}</span>
+                          <div className="text-[10px] text-gray-300">stimata</div>
                         </div>
                       ) : (
                         <span className="text-[var(--muted)] text-xs">-</span>
