@@ -138,7 +138,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div className="space-y-2">
             {recentAuctions.map(a => (
-              <Link key={a.id} href={`/admin/aste/${a.id}`} className="flex items-center justify-between p-3 rounded-xl hover:bg-[var(--border-light)] transition-colors">
+              <Link key={a.id} href={`/aste/${a.id}`} className="flex items-center justify-between p-3 rounded-xl hover:bg-[var(--border-light)] transition-colors">
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-sm truncate">{a.title}</div>
                   <div className="text-xs text-[var(--muted)]">{a.city} · {a.bidCount} offerte · {formatCurrency(a.maxBudget)}</div>
