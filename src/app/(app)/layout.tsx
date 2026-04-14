@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = {
     name: session.user.name || '',
     email: session.user.email || '',
-    role: (session.user as { role?: string }).role || 'customer',
+    role: session.user.role || 'customer',
   };
 
   return (

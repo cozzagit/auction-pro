@@ -47,7 +47,7 @@ export default async function AuctionDetailPage({
     .where(eq(auctionServices.auctionId, id));
 
   const isOwner = session?.user?.id === auction.userId;
-  const isPro = (session?.user as { role?: string })?.role === 'professional';
+  const isPro = session?.user?.role === 'professional';
   const alreadyBid = auctionBids.some(b => b.bid.professionalId === session?.user?.id);
 
   const location = [auction.city, auction.province].filter(Boolean).join(', ');

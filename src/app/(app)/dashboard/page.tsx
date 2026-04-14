@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   if (!session?.user?.id) redirect('/login');
 
   const userId = session.user.id;
-  const role = (session.user as { role?: string }).role;
+  const role = session.user.role;
 
   if (role === 'professional') redirect('/pro/dashboard');
   if (role === 'admin') redirect('/admin');

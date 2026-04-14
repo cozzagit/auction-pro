@@ -6,13 +6,12 @@ export default async function ProfessionalLayout({ children }: { children: React
   const session = await auth();
   if (!session?.user) redirect('/login');
 
-  const role = (session.user as { role?: string }).role;
-  if (role !== 'professional' && role !== 'admin') redirect('/dashboard');
+  if (session.user.role !== 'professional' && session.user.role !== 'admin') redirect('/dashboard');
 
   const user = {
     name: session.user.name || '',
     email: session.user.email || '',
-    role: role || 'professional',
+    role: session.user.role || 'professional',
   };
 
   return (
