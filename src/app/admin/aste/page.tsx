@@ -23,6 +23,8 @@ export default async function AdminAuctionsPage() {
       creatorEmail: users.email,
       bidCount: sql<number>`(SELECT count(*)::int FROM bids WHERE auction_id = ${auctions.id})`,
       lowestBid: sql<number | null>`(SELECT min(amount_cents) FROM bids WHERE auction_id = ${auctions.id})`,
+      platformFee: sql<number | null>`(SELECT platform_fee_cents FROM payments WHERE auction_id = ${auctions.id} AND status = 'paid' LIMIT 1)`,
+      finalAmount: sql<number | null>`(SELECT final_amount_cents FROM payments WHERE auction_id = ${auctions.id} AND status = 'paid' LIMIT 1)`,
     })
     .from(auctions)
     .innerJoin(users, eq(auctions.userId, users.id))
@@ -32,16 +34,21 @@ export default async function AdminAuctionsPage() {
   // Stats
   const byStatus: Record<string, number> = {};
   let totalBudget = 0;
+  let totalRevenue = 0;
   for (const a of allAuctions) {
     byStatus[a.status] = (byStatus[a.status] || 0) + 1;
     totalBudget += a.maxBudget;
+    if (a.platformFee) totalRevenue += a.platformFee;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-extrabold">Gestione Aste ({allAuctions.length})</h1>
-        <div className="text-sm text-[var(--muted)]">Volume budget: {formatCurrency(totalBudget)}</div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-[var(--muted)]">Volume: {formatCurrency(totalBudget)}</span>
+          {totalRevenue > 0 && <span className="font-bold text-emerald-600">Revenue: {formatCurrency(totalRevenue)}</span>}
+        </div>
       </div>
 
       {/* Status summary */}
@@ -68,6 +75,7 @@ export default async function AdminAuctionsPage() {
                 <th className="px-4 py-3 font-semibold text-[var(--muted)] text-right">Budget</th>
                 <th className="px-4 py-3 font-semibold text-[var(--muted)] text-center">Offerte</th>
                 <th className="px-4 py-3 font-semibold text-[var(--muted)] text-right">Migliore</th>
+                <th className="px-4 py-3 font-semibold text-[var(--muted)] text-right hidden lg:table-cell">Revenue</th>
                 <th className="px-4 py-3 font-semibold text-[var(--muted)]">Stato</th>
                 <th className="px-4 py-3 font-semibold text-[var(--muted)] hidden lg:table-cell">Creata</th>
               </tr>
@@ -79,7 +87,7 @@ export default async function AdminAuctionsPage() {
                 return (
                   <tr key={a.id} className="hover:bg-[var(--border-light)]/50 transition-colors">
                     <td className="px-4 py-3">
-                      <Link href={`/aste/${a.id}`} className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]">
+                      <Link href={`/admin/aste/${a.id}`} className="font-medium text-[var(--foreground)] hover:text-[var(--primary)]">
                         {a.title}
                       </Link>
                     </td>
@@ -104,6 +112,16 @@ export default async function AdminAuctionsPage() {
                         </div>
                       ) : (
                         <span className="text-[var(--muted)]">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right hidden lg:table-cell">
+                      {a.platformFee ? (
+                        <div>
+                          <span className="font-mono text-xs font-bold text-emerald-600">{formatCurrency(a.platformFee)}</span>
+                          {a.finalAmount && <div className="text-[10px] text-[var(--muted)]">su {formatCurrency(a.finalAmount)}</div>}
+                        </div>
+                      ) : (
+                        <span className="text-[var(--muted)] text-xs">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
