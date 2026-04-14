@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils/pricing';
 
 interface User {
@@ -17,8 +18,32 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
 };
 
 export function UserTable({ users }: { users: User[] }) {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  async function toggleActive(userId: string, currentActive: boolean) {
+    if (!confirm(`${currentActive ? 'Disattivare' : 'Riattivare'} questo utente?`)) return;
+    setActionLoading(userId);
+    await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: !currentActive }),
+    });
+    setActionLoading(null);
+    router.refresh();
+  }
+
+  async function changeRole(userId: string, newRole: string) {
+    if (!confirm(`Cambiare il ruolo a "${newRole}"?`)) return;
+    setActionLoading(userId);
+    await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
+    });
+    setActionLoading(null);
+    router.refresh();
+  }
 
   const filtered = users.filter(u => {
     if (roleFilter && u.role !== roleFilter) return false;
@@ -71,6 +96,7 @@ export function UserTable({ users }: { users: User[] }) {
                 <th className="px-4 py-3 font-semibold text-[var(--muted)] text-right hidden lg:table-cell">Volume</th>
                 <th className="px-4 py-3 font-semibold text-[var(--muted)]">Stato</th>
                 <th className="px-4 py-3 font-semibold text-[var(--muted)] hidden lg:table-cell">Iscritto</th>
+                <th className="px-4 py-3 font-semibold text-[var(--muted)] text-right">Azioni</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-light)]">
@@ -113,6 +139,29 @@ export function UserTable({ users }: { users: User[] }) {
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-xs text-[var(--muted)]">
                       {new Date(u.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: '2-digit' })}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => toggleActive(u.id, u.isActive)}
+                          disabled={actionLoading === u.id}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-all disabled:opacity-50 ${
+                            u.isActive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                          }`}
+                        >
+                          {u.isActive ? 'Disattiva' : 'Riattiva'}
+                        </button>
+                        <select
+                          value={u.role}
+                          onChange={e => changeRole(u.id, e.target.value)}
+                          disabled={actionLoading === u.id}
+                          className="px-1.5 py-1 rounded-lg text-[10px] border border-[var(--border)] bg-white disabled:opacity-50"
+                        >
+                          <option value="customer">Cliente</option>
+                          <option value="professional">Pro</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </div>
                     </td>
                   </tr>
                 );
