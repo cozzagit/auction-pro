@@ -18,19 +18,17 @@ async function main() {
   const { hash } = await import('bcryptjs');
   const { eq, sql } = await import('drizzle-orm');
 
-  console.log('🌱 Seeding demo data...\n');
+  console.log('🌱 Seeding demo data (category-aware)...\n');
 
   const passwordHash = await hash('Demo2026!', 12);
-
-  // ── Fetch categories ──
   const cats = await db.select().from(categories);
   const catMap = new Map(cats.map(c => [c.slug, c]));
   const svcs = await db.select().from(services);
   if (cats.length === 0) { console.error('❌ Run seed-categories first!'); process.exit(1); }
 
-  // ── Create 20 customers ──
+  // ── Customers (20) ──
   console.log('👥 Creating customers...');
-  const CUSTOMER_DATA = [
+  const CUSTOMERS = [
     { firstName: 'Marco', lastName: 'Rossi', city: 'Milano', province: 'MI' },
     { firstName: 'Laura', lastName: 'Bianchi', city: 'Roma', province: 'RM' },
     { firstName: 'Giuseppe', lastName: 'Verdi', city: 'Torino', province: 'TO' },
@@ -54,163 +52,171 @@ async function main() {
   ];
 
   const customerIds: string[] = [];
-  for (const c of CUSTOMER_DATA) {
+  for (const c of CUSTOMERS) {
     const email = `${c.firstName.toLowerCase()}.${c.lastName.toLowerCase()}@demo.ribasta.it`;
-    const [user] = await db.insert(users).values({
-      email, passwordHash, firstName: c.firstName, lastName: c.lastName,
-      city: c.city, province: c.province, role: 'customer',
-    }).onConflictDoNothing().returning();
+    const [user] = await db.insert(users).values({ email, passwordHash, firstName: c.firstName, lastName: c.lastName, city: c.city, province: c.province, role: 'customer' }).onConflictDoNothing().returning();
     if (user) customerIds.push(user.id);
   }
-  console.log(`  ✓ ${customerIds.length} clienti creati`);
+  console.log(`  ✓ ${customerIds.length} clienti`);
 
-  // ── Create 15 professionals ──
+  // ── Professionals (30 — 2-3 per category for realistic bidding) ──
   console.log('🔧 Creating professionals...');
-  const PRO_DATA = [
-    { firstName: 'Mario', lastName: 'Electrici', biz: 'Electrici & Figli Srl', vat: 'IT01234567890', city: 'Milano', province: 'MI', cats: ['elettricista'], insurance: true, license: true, exp: '15 anni', desc: 'Elettricista specializzato in impianti civili e industriali. Certificazioni CEI e abilitazione DM 37/08.' },
-    { firstName: 'Giovanni', lastName: 'Idraulici', biz: 'Idraulica Rapida', vat: 'IT01234567891', city: 'Milano', province: 'MI', cats: ['idraulica'], insurance: true, license: true, exp: '12 anni', desc: 'Pronto intervento idraulico 24/7. Specializzati in riparazioni e installazioni complete bagno.' },
-    { firstName: 'Luigi', lastName: 'Giardini', biz: 'Verde Vivo Giardini', vat: 'IT01234567892', city: 'Monza', province: 'MB', cats: ['giardinaggio'], insurance: true, license: false, exp: '8 anni', desc: 'Progettazione e manutenzione giardini, potature, impianti irrigazione.' },
-    { firstName: 'Rosa', lastName: 'Pulito', biz: 'Pulizie Perfette Sas', vat: 'IT01234567893', city: 'Roma', province: 'RM', cats: ['pulizie'], insurance: true, license: false, exp: '10 anni', desc: 'Servizi di pulizia professionale per case, uffici e post-cantiere.' },
-    { firstName: 'Franco', lastName: 'Muratore', biz: 'Edil Franco Srl', vat: 'IT01234567894', city: 'Torino', province: 'TO', cats: ['ristrutturazioni'], insurance: true, license: true, exp: '20 anni', desc: 'Ristrutturazioni chiavi in mano, impresa edile con 20 anni di esperienza.' },
-    { firstName: 'Antonio', lastName: 'Clima', biz: 'ClimaTop Srl', vat: 'IT01234567895', city: 'Bologna', province: 'BO', cats: ['climatizzazione'], insurance: true, license: true, exp: '10 anni', desc: 'Installazione e manutenzione climatizzatori, pompe di calore, VMC.' },
-    { firstName: 'Teresa', lastName: 'Fit', biz: 'FitLife Personal Training', vat: 'IT01234567896', city: 'Firenze', province: 'FI', cats: ['fitness'], insurance: true, license: true, exp: '6 anni', desc: 'Personal trainer certificata CONI. Programmi personalizzati a domicilio.' },
-    { firstName: 'Marco', lastName: 'Tech', biz: 'TechAssist Italia', vat: 'IT01234567897', city: 'Milano', province: 'MI', cats: ['informatica'], insurance: false, license: false, exp: '8 anni', desc: 'Assistenza informatica, riparazione PC e Mac, configurazione reti.' },
-    { firstName: 'Carla', lastName: 'Foto', biz: 'Carla Foto Studio', vat: 'IT01234567898', city: 'Roma', province: 'RM', cats: ['fotografia'], insurance: true, license: false, exp: '12 anni', desc: 'Fotografa professionista per matrimoni, eventi, ritratti e aziende.' },
-    { firstName: 'Piero', lastName: 'Trasloco', biz: 'Traslochi Express', vat: 'IT01234567899', city: 'Napoli', province: 'NA', cats: ['traslochi'], insurance: true, license: false, exp: '15 anni', desc: 'Traslochi nazionali e internazionali, smontaggio mobili, deposito.' },
-    { firstName: 'Lucia', lastName: 'Baby', biz: 'Lucia Babysitting', vat: 'IT01234567900', city: 'Bergamo', province: 'BG', cats: ['babysitter'], insurance: true, license: true, exp: '5 anni', desc: 'Babysitter certificata con esperienza in pedagogia infantile.' },
-    { firstName: 'Stefano', lastName: 'Consulto', biz: 'Studio Consulenze Legali', vat: 'IT01234567901', city: 'Milano', province: 'MI', cats: ['consulenze'], insurance: true, license: true, exp: '18 anni', desc: 'Consulenze legali, fiscali e amministrative per privati e aziende.' },
-    { firstName: 'Elisa', lastName: 'Benesse', biz: 'Oasi del Benessere', vat: 'IT01234567902', city: 'Verona', province: 'VR', cats: ['benessere'], insurance: true, license: true, exp: '7 anni', desc: 'Massaggi professionali, riflessologia, trattamenti olistici a domicilio.' },
-    { firstName: 'Claudio', lastName: 'Sicuro', biz: 'SecurHome Srl', vat: 'IT01234567903', city: 'Padova', province: 'PD', cats: ['sicurezza'], insurance: true, license: true, exp: '14 anni', desc: 'Sistemi di allarme, videosorveglianza, controllo accessi, domotica.' },
-    { firstName: 'Federica', lastName: 'Cucina', biz: 'Chef a Domicilio', vat: 'IT01234567904', city: 'Firenze', province: 'FI', cats: ['catering'], insurance: true, license: true, exp: '9 anni', desc: 'Catering per eventi, cene private, servizio chef a domicilio.' },
+  const PRO_DATA: Array<{ firstName: string; lastName: string; biz: string; vat: string; city: string; province: string; catSlugs: string[]; ins: boolean; lic: boolean; exp: string; desc: string }> = [
+    // Elettricisti (3)
+    { firstName: 'Mario', lastName: 'Volta', biz: 'Volta Impianti Srl', vat: 'IT01234500001', city: 'Milano', province: 'MI', catSlugs: ['elettricista'], ins: true, lic: true, exp: '15 anni', desc: 'Elettricista specializzato in impianti civili e industriali.' },
+    { firstName: 'Pietro', lastName: 'Ampere', biz: 'ElettroService', vat: 'IT01234500002', city: 'Torino', province: 'TO', catSlugs: ['elettricista'], ins: true, lic: true, exp: '10 anni', desc: 'Installazione e manutenzione impianti elettrici certificati.' },
+    { firstName: 'Sergio', lastName: 'Watt', biz: 'Watt Elettrica', vat: 'IT01234500003', city: 'Roma', province: 'RM', catSlugs: ['elettricista'], ins: true, lic: true, exp: '8 anni', desc: 'Pronto intervento elettrico, quadri, domotica.' },
+    // Idraulici (3)
+    { firstName: 'Giovanni', lastName: 'Tubini', biz: 'Idraulica Rapida', vat: 'IT01234500004', city: 'Milano', province: 'MI', catSlugs: ['idraulica'], ins: true, lic: true, exp: '12 anni', desc: 'Pronto intervento idraulico 24/7. Riparazioni e installazioni.' },
+    { firstName: 'Carlo', lastName: 'Rubinetti', biz: 'AcquaPro Srl', vat: 'IT01234500005', city: 'Bologna', province: 'BO', catSlugs: ['idraulica'], ins: true, lic: true, exp: '18 anni', desc: 'Specialisti in impianti idrosanitari e riscaldamento.' },
+    { firstName: 'Fabio', lastName: 'Fontaniere', biz: 'Idraulica Fontaniere', vat: 'IT01234500006', city: 'Napoli', province: 'NA', catSlugs: ['idraulica'], ins: true, lic: false, exp: '7 anni', desc: 'Riparazioni perdite, sostituzione sanitari e rubinetteria.' },
+    // Giardinieri (3)
+    { firstName: 'Luigi', lastName: 'Prato', biz: 'Verde Vivo Giardini', vat: 'IT01234500007', city: 'Monza', province: 'MB', catSlugs: ['giardinaggio'], ins: true, lic: false, exp: '8 anni', desc: 'Progettazione e manutenzione giardini, potature, irrigazione.' },
+    { firstName: 'Marco', lastName: 'Giardino', biz: 'GreenTeam', vat: 'IT01234500008', city: 'Bergamo', province: 'BG', catSlugs: ['giardinaggio'], ins: true, lic: false, exp: '12 anni', desc: 'Manutenzione aree verdi, piantumazione, taglio siepi.' },
+    { firstName: 'Alberto', lastName: 'Fiori', biz: 'Il Giardiniere', vat: 'IT01234500009', city: 'Firenze', province: 'FI', catSlugs: ['giardinaggio'], ins: false, lic: false, exp: '5 anni', desc: 'Taglio erba, potatura, piccoli lavori di giardinaggio.' },
+    // Pulizie (2)
+    { firstName: 'Rosa', lastName: 'Pulito', biz: 'Pulizie Perfette Sas', vat: 'IT01234500010', city: 'Roma', province: 'RM', catSlugs: ['pulizie'], ins: true, lic: false, exp: '10 anni', desc: 'Pulizia professionale per case, uffici e post-cantiere.' },
+    { firstName: 'Maria', lastName: 'Splendore', biz: 'Crystal Clean', vat: 'IT01234500011', city: 'Milano', province: 'MI', catSlugs: ['pulizie'], ins: true, lic: false, exp: '6 anni', desc: 'Servizi di pulizia ordinaria e straordinaria.' },
+    // Ristrutturazioni (2)
+    { firstName: 'Franco', lastName: 'Muratore', biz: 'Edil Franco Srl', vat: 'IT01234500012', city: 'Torino', province: 'TO', catSlugs: ['ristrutturazioni'], ins: true, lic: true, exp: '20 anni', desc: 'Ristrutturazioni chiavi in mano, impresa edile.' },
+    { firstName: 'Enzo', lastName: 'Costruire', biz: 'Costruzioni Enzo', vat: 'IT01234500013', city: 'Roma', province: 'RM', catSlugs: ['ristrutturazioni'], ins: true, lic: true, exp: '15 anni', desc: 'Ristrutturazioni appartamenti, bagni, cucine.' },
+    // Climatizzazione (2)
+    { firstName: 'Antonio', lastName: 'Clima', biz: 'ClimaTop Srl', vat: 'IT01234500014', city: 'Bologna', province: 'BO', catSlugs: ['climatizzazione'], ins: true, lic: true, exp: '10 anni', desc: 'Installazione climatizzatori, pompe di calore, VMC.' },
+    { firstName: 'Daniele', lastName: 'Freddo', biz: 'AirCool Service', vat: 'IT01234500015', city: 'Firenze', province: 'FI', catSlugs: ['climatizzazione'], ins: true, lic: true, exp: '8 anni', desc: 'Manutenzione e installazione impianti di climatizzazione.' },
+    // Fitness (2)
+    { firstName: 'Teresa', lastName: 'Fit', biz: 'FitLife Training', vat: 'IT01234500016', city: 'Milano', province: 'MI', catSlugs: ['fitness'], ins: true, lic: true, exp: '6 anni', desc: 'Personal trainer certificata CONI. Programmi a domicilio.' },
+    { firstName: 'Luca', lastName: 'Muscoli', biz: 'Strong Personal', vat: 'IT01234500017', city: 'Roma', province: 'RM', catSlugs: ['fitness'], ins: true, lic: true, exp: '9 anni', desc: 'Personal trainer, preparazione atletica, dimagrimento.' },
+    // Informatica (2)
+    { firstName: 'Marco', lastName: 'Byte', biz: 'TechAssist Italia', vat: 'IT01234500018', city: 'Milano', province: 'MI', catSlugs: ['informatica'], ins: false, lic: false, exp: '8 anni', desc: 'Assistenza informatica, riparazione PC e Mac.' },
+    { firstName: 'Paolo', lastName: 'Chip', biz: 'PC Doctor', vat: 'IT01234500019', city: 'Torino', province: 'TO', catSlugs: ['informatica'], ins: false, lic: false, exp: '12 anni', desc: 'Riparazione computer, configurazione reti, recupero dati.' },
+    // Fotografia (2)
+    { firstName: 'Carla', lastName: 'Scatto', biz: 'Carla Foto Studio', vat: 'IT01234500020', city: 'Roma', province: 'RM', catSlugs: ['fotografia'], ins: true, lic: false, exp: '12 anni', desc: 'Fotografa per matrimoni, eventi, ritratti.' },
+    { firstName: 'Filippo', lastName: 'Flash', biz: 'Flash Photography', vat: 'IT01234500021', city: 'Firenze', province: 'FI', catSlugs: ['fotografia'], ins: true, lic: false, exp: '7 anni', desc: 'Fotografia eventi, corporate, food.' },
+    // Traslochi (2)
+    { firstName: 'Piero', lastName: 'Trasloco', biz: 'Traslochi Express', vat: 'IT01234500022', city: 'Napoli', province: 'NA', catSlugs: ['traslochi'], ins: true, lic: false, exp: '15 anni', desc: 'Traslochi nazionali, smontaggio mobili, deposito.' },
+    { firstName: 'Remo', lastName: 'Trasporto', biz: 'MoveFast Srl', vat: 'IT01234500023', city: 'Milano', province: 'MI', catSlugs: ['traslochi'], ins: true, lic: false, exp: '10 anni', desc: 'Traslochi rapidi con personale qualificato.' },
+    // Babysitter (2)
+    { firstName: 'Lucia', lastName: 'Bimbi', biz: 'Lucia Babysitting', vat: 'IT01234500024', city: 'Bergamo', province: 'BG', catSlugs: ['babysitter'], ins: true, lic: true, exp: '5 anni', desc: 'Babysitter certificata con esperienza in pedagogia infantile.' },
+    { firstName: 'Marta', lastName: 'Piccoli', biz: 'Happy Kids', vat: 'IT01234500025', city: 'Milano', province: 'MI', catSlugs: ['babysitter'], ins: true, lic: true, exp: '8 anni', desc: 'Assistenza bambini, aiuto compiti, attivita ludiche.' },
+    // Consulenze (2)
+    { firstName: 'Stefano', lastName: 'Legge', biz: 'Studio Legge & Fisco', vat: 'IT01234500026', city: 'Milano', province: 'MI', catSlugs: ['consulenze'], ins: true, lic: true, exp: '18 anni', desc: 'Consulenze legali, fiscali e amministrative.' },
+    { firstName: 'Giulia', lastName: 'Avvocato', biz: 'Consulenza360', vat: 'IT01234500027', city: 'Roma', province: 'RM', catSlugs: ['consulenze'], ins: true, lic: true, exp: '10 anni', desc: 'Consulenza legale e contrattualistica per privati.' },
+    // Benessere (2)
+    { firstName: 'Elisa', lastName: 'Relax', biz: 'Oasi del Benessere', vat: 'IT01234500028', city: 'Verona', province: 'VR', catSlugs: ['benessere'], ins: true, lic: true, exp: '7 anni', desc: 'Massaggi professionali, riflessologia, trattamenti olistici.' },
+    { firstName: 'Silvia', lastName: 'Zen', biz: 'Harmony Wellness', vat: 'IT01234500029', city: 'Firenze', province: 'FI', catSlugs: ['benessere'], ins: true, lic: true, exp: '5 anni', desc: 'Massaggi rilassanti, aromaterapia a domicilio.' },
+    // Sicurezza (2)
+    { firstName: 'Claudio', lastName: 'Sicuro', biz: 'SecurHome Srl', vat: 'IT01234500030', city: 'Padova', province: 'PD', catSlugs: ['sicurezza'], ins: true, lic: true, exp: '14 anni', desc: 'Allarmi, videosorveglianza, controllo accessi.' },
+    // Catering (2)
+    { firstName: 'Federica', lastName: 'Chef', biz: 'Chef a Domicilio', vat: 'IT01234500031', city: 'Firenze', province: 'FI', catSlugs: ['catering'], ins: true, lic: true, exp: '9 anni', desc: 'Catering per eventi, cene private, chef a domicilio.' },
   ];
 
-  const proUserIds: string[] = [];
+  // Map: catSlug -> list of proUserIds
+  const proByCat = new Map<string, string[]>();
+
   for (const p of PRO_DATA) {
     const email = `${p.firstName.toLowerCase()}.${p.lastName.toLowerCase()}@pro.ribasta.it`;
     const [user] = await db.insert(users).values({
       email, passwordHash, firstName: p.firstName, lastName: p.lastName,
-      city: p.city, province: p.province, phone: `+39 ${String(Math.floor(300000000 + Math.random() * 99999999)).padStart(10, '0')}`,
+      city: p.city, province: p.province, phone: `+39 3${String(Math.floor(10000000 + Math.random() * 89999999))}`,
       role: 'professional',
     }).onConflictDoNothing().returning();
     if (!user) continue;
-    proUserIds.push(user.id);
 
     const rating = +(3.5 + Math.random() * 1.5).toFixed(2);
     const totalJobs = Math.floor(5 + Math.random() * 80);
     const [pro] = await db.insert(professionals).values({
       userId: user.id, businessName: p.biz, vatNumber: p.vat,
       city: p.city, province: p.province, description: p.desc,
-      experience: p.exp, hasInsurance: p.insurance, hasLicense: p.license,
+      experience: p.exp, hasInsurance: p.ins, hasLicense: p.lic,
       status: 'approved', rating, totalJobs,
     }).onConflictDoNothing().returning();
 
     if (pro) {
-      for (const catSlug of p.cats) {
-        const cat = catMap.get(catSlug);
+      for (const slug of p.catSlugs) {
+        const cat = catMap.get(slug);
         if (cat) {
           await db.insert(professionalCategories).values({ professionalId: pro.id, categoryId: cat.id }).onConflictDoNothing();
+          if (!proByCat.has(slug)) proByCat.set(slug, []);
+          proByCat.get(slug)!.push(user.id);
         }
       }
     }
   }
-  console.log(`  ✓ ${proUserIds.length} professionisti creati (tutti approvati)`);
+  console.log(`  ✓ ${PRO_DATA.length} professionisti (matching per categoria)`);
 
-  // ── Create 100 auctions ──
+  // ── Auctions (100) ──
   console.log('📋 Creating auctions...');
-  const AUCTION_TEMPLATES = [
-    { title: 'Rifacimento impianto elettrico appartamento', catSlug: 'elettricista', budget: [800, 5000], desc: 'Necessito di rifare completamente l\'impianto elettrico del mio appartamento di {mq} mq. Serve certificazione di conformita.' },
-    { title: 'Installazione punti luce e prese', catSlug: 'elettricista', budget: [200, 800], desc: 'Devo installare nuovi punti luce e prese elettriche in {rooms} stanze. Preferibilmente con placche moderne.' },
-    { title: 'Riparazione perdita bagno', catSlug: 'idraulica', budget: [150, 600], desc: 'Ho una perdita d\'acqua nel bagno principale, probabilmente dalla tubatura sotto il lavabo. Serve intervento urgente.' },
-    { title: 'Ristrutturazione bagno completa', catSlug: 'idraulica', budget: [3000, 8000], desc: 'Voglio rifare completamente il bagno: sanitari, piatto doccia, piastrelle, rubinetteria. Misure: {mq} mq.' },
-    { title: 'Manutenzione giardino mensile', catSlug: 'giardinaggio', budget: [100, 400], desc: 'Cerco giardiniere per manutenzione mensile del giardino di {mq} mq. Taglio erba, potatura siepi, pulizia.' },
-    { title: 'Progettazione giardino con irrigazione', catSlug: 'giardinaggio', budget: [1500, 5000], desc: 'Devo progettare il giardino della nuova casa ({mq} mq) con impianto di irrigazione automatico e piantumazione.' },
-    { title: 'Pulizia appartamento post trasloco', catSlug: 'pulizie', budget: [150, 500], desc: 'Appartamento di {rooms} locali da pulire a fondo dopo trasloco. Incluso pulizia vetri e sanitari.' },
-    { title: 'Pulizia ufficio settimanale', catSlug: 'pulizie', budget: [200, 600], desc: 'Cerco servizio di pulizia settimanale per ufficio di {mq} mq. Aspirazione, bagni, scrivania, cucina.' },
-    { title: 'Ristrutturazione cucina', catSlug: 'ristrutturazioni', budget: [5000, 15000], desc: 'Devo rifare la cucina: demolizione, impianti, piastrelle, montaggio mobili. Superficie circa {mq} mq.' },
-    { title: 'Tinteggiatura appartamento', catSlug: 'ristrutturazioni', budget: [800, 3000], desc: 'Tinteggiatura completa appartamento {rooms} locali. Pareti e soffitti, preparazione superfici.' },
-    { title: 'Installazione climatizzatore', catSlug: 'climatizzazione', budget: [600, 2000], desc: 'Installazione climatizzatore dual split per {rooms} stanze. Preferibilmente classe energetica A+++.' },
-    { title: 'Personal trainer a domicilio', catSlug: 'fitness', budget: [200, 600], desc: 'Cerco personal trainer per {sessions} sessioni settimanali a domicilio. Obiettivo: tonificazione e perdita peso.' },
-    { title: 'Riparazione PC lento', catSlug: 'informatica', budget: [50, 200], desc: 'Il mio PC e diventato molto lento. Serve diagnosi, pulizia software, eventuale upgrade RAM/SSD.' },
-    { title: 'Servizio fotografico matrimonio', catSlug: 'fotografia', budget: [1000, 3000], desc: 'Cerco fotografo per il mio matrimonio il {date}. Cerimonia e ricevimento, circa 8 ore di servizio.' },
-    { title: 'Trasloco appartamento bilocale', catSlug: 'traslochi', budget: [400, 1200], desc: 'Trasloco da {from} a {to}. Bilocale con mobili standard, 3° piano con ascensore.' },
-    { title: 'Babysitter per weekend', catSlug: 'babysitter', budget: [80, 200], desc: 'Cerco babysitter per sabato sera dalle 19 alle 23. Bambino di {age} anni, zona {city}.' },
-    { title: 'Consulenza fiscale partita IVA', catSlug: 'consulenze', budget: [100, 400], desc: 'Devo aprire partita IVA come freelancer. Cerco commercialista per consulenza su regime fiscale e adempimenti.' },
-    { title: 'Massaggio rilassante a domicilio', catSlug: 'benessere', budget: [50, 150], desc: 'Cerco massaggiatore/trice per sessione di massaggio rilassante a domicilio di {duration} minuti.' },
-    { title: 'Installazione allarme casa', catSlug: 'sicurezza', budget: [500, 2000], desc: 'Installazione sistema di allarme per villetta: sensori porte/finestre, sirena, telecomando, app smartphone.' },
-    { title: 'Catering per festa compleanno', catSlug: 'catering', budget: [300, 1500], desc: 'Catering per festa di compleanno, {guests} invitati. Buffet finger food + torta + bevande.' },
+  const TEMPLATES = [
+    { title: 'Rifacimento impianto elettrico appartamento', catSlug: 'elettricista', budget: [800, 5000], desc: 'Necessito di rifare l\'impianto elettrico del mio appartamento di {mq} mq.' },
+    { title: 'Installazione punti luce e prese', catSlug: 'elettricista', budget: [200, 800], desc: 'Installare nuovi punti luce e prese in {rooms} stanze.' },
+    { title: 'Sostituzione quadro elettrico', catSlug: 'elettricista', budget: [300, 1200], desc: 'Sostituzione quadro elettrico obsoleto con nuovo certificato.' },
+    { title: 'Riparazione perdita bagno', catSlug: 'idraulica', budget: [150, 600], desc: 'Perdita d\'acqua nel bagno, probabilmente tubatura sotto lavabo.' },
+    { title: 'Ristrutturazione bagno completa', catSlug: 'idraulica', budget: [3000, 8000], desc: 'Rifare completamente il bagno: sanitari, doccia, piastrelle. {mq} mq.' },
+    { title: 'Sostituzione rubinetteria cucina', catSlug: 'idraulica', budget: [100, 400], desc: 'Sostituzione rubinetto cucina con miscelatore nuovo.' },
+    { title: 'Manutenzione giardino mensile', catSlug: 'giardinaggio', budget: [100, 400], desc: 'Manutenzione mensile giardino {mq} mq. Taglio erba, siepi.' },
+    { title: 'Progettazione giardino con irrigazione', catSlug: 'giardinaggio', budget: [1500, 5000], desc: 'Progettare giardino {mq} mq con irrigazione automatico.' },
+    { title: 'Potatura alberi alto fusto', catSlug: 'giardinaggio', budget: [200, 800], desc: 'Potatura di 3 alberi alto fusto nel giardino condominiale.' },
+    { title: 'Pulizia appartamento post trasloco', catSlug: 'pulizie', budget: [150, 500], desc: 'Appartamento {rooms} locali da pulire a fondo dopo trasloco.' },
+    { title: 'Pulizia ufficio settimanale', catSlug: 'pulizie', budget: [200, 600], desc: 'Pulizia settimanale ufficio {mq} mq.' },
+    { title: 'Ristrutturazione cucina', catSlug: 'ristrutturazioni', budget: [5000, 15000], desc: 'Rifare la cucina: demolizione, impianti, piastrelle, mobili.' },
+    { title: 'Tinteggiatura appartamento', catSlug: 'ristrutturazioni', budget: [800, 3000], desc: 'Tinteggiatura completa {rooms} locali. Pareti e soffitti.' },
+    { title: 'Installazione climatizzatore', catSlug: 'climatizzazione', budget: [600, 2000], desc: 'Installazione climatizzatore dual split per {rooms} stanze.' },
+    { title: 'Personal trainer a domicilio', catSlug: 'fitness', budget: [200, 600], desc: 'Personal trainer per {sessions} sessioni settimanali a domicilio.' },
+    { title: 'Riparazione PC lento', catSlug: 'informatica', budget: [50, 200], desc: 'PC molto lento. Serve diagnosi, pulizia, eventuale upgrade.' },
+    { title: 'Configurazione rete WiFi casa', catSlug: 'informatica', budget: [80, 300], desc: 'Configurare rete WiFi mesh per casa su 2 piani.' },
+    { title: 'Servizio fotografico matrimonio', catSlug: 'fotografia', budget: [1000, 3000], desc: 'Fotografo per matrimonio. Cerimonia e ricevimento, circa 8 ore.' },
+    { title: 'Trasloco bilocale', catSlug: 'traslochi', budget: [400, 1200], desc: 'Trasloco bilocale con mobili standard, 3° piano con ascensore.' },
+    { title: 'Babysitter per weekend', catSlug: 'babysitter', budget: [80, 200], desc: 'Babysitter sabato sera dalle 19 alle 23. Bambino di {age} anni.' },
+    { title: 'Babysitter pomeridiana', catSlug: 'babysitter', budget: [60, 150], desc: 'Babysitter 3 pomeriggi a settimana, uscita scuola. 2 bambini.' },
+    { title: 'Consulenza fiscale partita IVA', catSlug: 'consulenze', budget: [100, 400], desc: 'Aprire partita IVA freelancer. Consulenza regime fiscale.' },
+    { title: 'Massaggio rilassante a domicilio', catSlug: 'benessere', budget: [50, 150], desc: 'Massaggio rilassante a domicilio di {duration} minuti.' },
+    { title: 'Installazione allarme casa', catSlug: 'sicurezza', budget: [500, 2000], desc: 'Sistema allarme per villetta: sensori, sirena, app smartphone.' },
+    { title: 'Catering festa compleanno', catSlug: 'catering', budget: [300, 1500], desc: 'Catering per festa, {guests} invitati. Buffet + torta + bevande.' },
   ];
 
-  const STATUSES: Array<{ status: 'active' | 'expired' | 'awarded' | 'completed' | 'in_progress'; weight: number }> = [
-    { status: 'active', weight: 35 },
-    { status: 'expired', weight: 10 },
-    { status: 'awarded', weight: 15 },
-    { status: 'in_progress', weight: 15 },
-    { status: 'completed', weight: 25 },
+  const STATUSES: Array<{ s: 'active' | 'expired' | 'awarded' | 'completed' | 'in_progress'; w: number }> = [
+    { s: 'active', w: 35 }, { s: 'expired', w: 10 }, { s: 'awarded', w: 15 },
+    { s: 'in_progress', w: 15 }, { s: 'completed', w: 25 },
   ];
-
-  function pickStatus(): 'active' | 'expired' | 'awarded' | 'completed' | 'in_progress' {
-    const total = STATUSES.reduce((s, x) => s + x.weight, 0);
+  function pickStatus() {
+    const total = STATUSES.reduce((s, x) => s + x.w, 0);
     let r = Math.random() * total;
-    for (const s of STATUSES) {
-      r -= s.weight;
-      if (r <= 0) return s.status;
-    }
-    return 'active';
+    for (const x of STATUSES) { r -= x.w; if (r <= 0) return x.s; }
+    return 'active' as const;
   }
 
-  const cities = CUSTOMER_DATA.map(c => ({ city: c.city, province: c.province }));
-  const auctionIds: Array<{ id: string; userId: string; maxBudget: number; status: string }> = [];
+  const cities = CUSTOMERS.map(c => ({ city: c.city, province: c.province }));
+  const auctionData: Array<{ id: string; userId: string; maxBudget: number; status: string; catSlug: string }> = [];
 
   for (let i = 0; i < 100; i++) {
-    const tmpl = AUCTION_TEMPLATES[i % AUCTION_TEMPLATES.length];
+    const tmpl = TEMPLATES[i % TEMPLATES.length];
     const customer = customerIds[i % customerIds.length];
     const loc = cities[Math.floor(Math.random() * cities.length)];
-    const budgetRange = tmpl.budget;
-    const budgetEur = Math.round(budgetRange[0] + Math.random() * (budgetRange[1] - budgetRange[0]));
-    const budgetCents = budgetEur * 100;
-
+    const budgetEur = Math.round(tmpl.budget[0] + Math.random() * (tmpl.budget[1] - tmpl.budget[0]));
     const status = pickStatus();
     const daysAgo = Math.floor(Math.random() * 60);
-    const createdAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
-
-    let expiresAt: Date;
-    if (status === 'active') {
-      expiresAt = new Date(Date.now() + (1 + Math.floor(Math.random() * 6)) * 24 * 60 * 60 * 1000);
-    } else if (status === 'expired') {
-      expiresAt = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
-    } else {
-      expiresAt = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
-    }
+    const createdAt = new Date(Date.now() - daysAgo * 86400000);
+    const expiresAt = status === 'active'
+      ? new Date(Date.now() + (1 + Math.floor(Math.random() * 6)) * 86400000)
+      : new Date(createdAt.getTime() + 7 * 86400000);
 
     const desc = tmpl.desc
       .replace('{mq}', String(30 + Math.floor(Math.random() * 120)))
       .replace('{rooms}', String(2 + Math.floor(Math.random() * 4)))
       .replace('{sessions}', String(2 + Math.floor(Math.random() * 3)))
-      .replace('{date}', '15 giugno 2026')
-      .replace('{from}', loc.city)
-      .replace('{to}', cities[Math.floor(Math.random() * cities.length)].city)
       .replace('{age}', String(2 + Math.floor(Math.random() * 8)))
-      .replace('{city}', loc.city)
       .replace('{duration}', String([60, 90, 120][Math.floor(Math.random() * 3)]))
       .replace('{guests}', String(20 + Math.floor(Math.random() * 50)));
 
-    const title = tmpl.title + (i > AUCTION_TEMPLATES.length ? ` #${Math.floor(i / AUCTION_TEMPLATES.length) + 1}` : '');
+    const title = tmpl.title + (i >= TEMPLATES.length ? ` #${Math.floor(i / TEMPLATES.length) + 1}` : '');
 
     const [auction] = await db.insert(auctions).values({
-      userId: customer,
-      title,
-      description: desc,
-      maxBudget: budgetCents,
-      city: loc.city,
-      province: loc.province,
-      status,
-      expiresAt,
-      createdAt,
-      updatedAt: createdAt,
-      ...(status === 'completed' ? { closedAt: new Date(createdAt.getTime() + (3 + Math.floor(Math.random() * 20)) * 24 * 60 * 60 * 1000) } : {}),
+      userId: customer, title, description: desc,
+      maxBudget: budgetEur * 100, city: loc.city, province: loc.province,
+      status, expiresAt, createdAt, updatedAt: createdAt,
+      ...(status === 'completed' ? { closedAt: new Date(createdAt.getTime() + (3 + Math.floor(Math.random() * 20)) * 86400000) } : {}),
     }).returning();
 
-    // Link to a service
     const cat = catMap.get(tmpl.catSlug);
     const catServices = svcs.filter(s => cat && s.categoryId === cat.id);
     if (catServices.length > 0) {
@@ -218,77 +224,70 @@ async function main() {
       await db.insert(auctionServices).values({ auctionId: auction.id, serviceId: svc.id, parameters: {} });
     }
 
-    auctionIds.push({ id: auction.id, userId: customer, maxBudget: budgetCents, status });
+    auctionData.push({ id: auction.id, userId: customer, maxBudget: budgetEur * 100, status, catSlug: tmpl.catSlug });
   }
-  console.log(`  ✓ 100 aste create`);
+  console.log(`  ✓ 100 aste`);
 
-  // ── Create bids (2-6 per auction, except expired with few) ──
-  console.log('💰 Creating bids...');
-  let bidCount = 0;
-  let paymentCount = 0;
-  let contractCount = 0;
-  let reviewCount = 0;
+  // ── Bids (ONLY from matching-category professionals) ──
+  console.log('💰 Creating bids (category-matched)...');
+  let bidCount = 0, paymentCount = 0, contractCount = 0, reviewCount = 0;
 
-  for (const auction of auctionIds) {
-    const numBids = auction.status === 'expired' ? Math.floor(Math.random() * 2) : 2 + Math.floor(Math.random() * 5);
-    const shuffledPros = [...proUserIds].sort(() => Math.random() - 0.5);
-    let lowestBidId: string | null = null;
-    let lowestAmount = Infinity;
+  for (const auction of auctionData) {
+    const matchingPros = proByCat.get(auction.catSlug) || [];
+    if (matchingPros.length === 0) continue;
 
-    for (let b = 0; b < Math.min(numBids, shuffledPros.length); b++) {
-      const proId = shuffledPros[b];
-      // Bid between 50% and 95% of budget
+    const numBids = auction.status === 'expired' ? Math.floor(Math.random() * 2) : Math.min(matchingPros.length, 2 + Math.floor(Math.random() * 2));
+    const shuffled = [...matchingPros].sort(() => Math.random() - 0.5);
+    let lowestBidId: string | null = null, lowestAmount = Infinity;
+
+    for (let b = 0; b < numBids; b++) {
+      const proId = shuffled[b];
       const bidPercent = 0.5 + Math.random() * 0.45;
       const amountCents = Math.round(auction.maxBudget * bidPercent);
-      const bidStatus = (auction.status === 'awarded' || auction.status === 'in_progress' || auction.status === 'completed')
-        ? (amountCents < lowestAmount ? 'accepted' : 'rejected')
-        : 'pending';
+
+      const msgs = [
+        'Disponibile subito, esperienza pluriennale nel settore.',
+        'Offro servizio completo con garanzia.',
+        'Posso iniziare entro la settimana. Lavoro di qualita garantita.',
+        'Preventivo competitivo con materiali inclusi.',
+        null,
+      ];
 
       const [bid] = await db.insert(bids).values({
         auctionId: auction.id, professionalId: proId,
-        amountCents, message: b === 0 ? 'Disponibile subito, esperienza pluriennale nel settore.' : (b === 1 ? 'Offro servizio completo con garanzia.' : null),
-        status: 'pending', // will update the winner below
+        amountCents, message: msgs[Math.floor(Math.random() * msgs.length)],
+        status: 'pending',
       }).returning();
 
-      if (amountCents < lowestAmount) {
-        lowestAmount = amountCents;
-        lowestBidId = bid.id;
-      }
+      if (amountCents < lowestAmount) { lowestAmount = amountCents; lowestBidId = bid.id; }
       bidCount++;
     }
 
-    // For awarded/in_progress/completed: accept the lowest bid and create payment/contract
     if (lowestBidId && ['awarded', 'in_progress', 'completed'].includes(auction.status)) {
-      // Accept lowest
       await db.update(bids).set({ status: 'accepted' }).where(eq(bids.id, lowestBidId));
-      // Reject others
-      const allAuctionBids = await db.select().from(bids).where(eq(bids.auctionId, auction.id));
-      for (const ab of allAuctionBids) {
+      const allBids = await db.select().from(bids).where(eq(bids.auctionId, auction.id));
+      for (const ab of allBids) {
         if (ab.id !== lowestBidId && ab.status === 'pending') {
           await db.update(bids).set({ status: 'rejected' }).where(eq(bids.id, ab.id));
         }
       }
-
-      // Update auction
       await db.update(auctions).set({ winningBidId: lowestBidId }).where(eq(auctions.id, auction.id));
 
-      // Create payment
-      const finalAmountCents = Math.round((auction.maxBudget + lowestAmount) / 2);
-      const platformFeeCents = Math.round(finalAmountCents * 0.06);
+      const finalCents = Math.round((auction.maxBudget + lowestAmount) / 2);
+      const feeCents = Math.round(finalCents * 0.06);
       const [acceptedBid] = await db.select().from(bids).where(eq(bids.id, lowestBidId));
-
       const isPaid = ['in_progress', 'completed'].includes(auction.status);
+
       const [payment] = await db.insert(payments).values({
         auctionId: auction.id, bidId: lowestBidId,
         clientUserId: auction.userId, professionalUserId: acceptedBid.professionalId,
         originalAmountCents: auction.maxBudget, winningBidAmountCents: lowestAmount,
-        finalAmountCents, platformFeeCents, platformFeePercent: 6,
+        finalAmountCents: finalCents, platformFeeCents: feeCents, platformFeePercent: 6,
         status: isPaid ? 'paid' : 'pending',
         ...(isPaid ? { paidAt: new Date() } : {}),
       }).returning();
       paymentCount++;
 
-      // Create contract for paid ones
       if (isPaid) {
         const [client] = await db.select().from(users).where(eq(users.id, auction.userId));
         const [pro] = await db.select().from(users).where(eq(users.id, acceptedBid.professionalId));
@@ -304,23 +303,12 @@ async function main() {
         });
         contractCount++;
 
-        // Reviews for completed
         if (auction.status === 'completed') {
-          const rating = Math.floor(3 + Math.random() * 3); // 3-5
-          const comments = [
-            'Ottimo lavoro, professionista serio e puntuale.',
-            'Lavoro fatto bene, prezzo giusto. Consigliato.',
-            'Molto soddisfatto, super preciso e pulito.',
-            'Buon lavoro, tempi rispettati. Bravo.',
-            'Eccellente! Ha superato le aspettative.',
-            'Professionista competente, lo richiamero sicuramente.',
-          ];
+          const rating = Math.floor(3 + Math.random() * 3);
+          const comments = ['Ottimo lavoro, professionista serio e puntuale.', 'Lavoro fatto bene, prezzo giusto.', 'Molto soddisfatto, super preciso.', 'Bravo, tempi rispettati.', 'Eccellente! Superato le aspettative.', 'Competente, lo richiamero sicuramente.'];
           await db.insert(reviews).values({
-            auctionId: auction.id,
-            professionalId: acceptedBid.professionalId,
-            clientUserId: auction.userId,
-            rating,
-            comment: comments[Math.floor(Math.random() * comments.length)],
+            auctionId: auction.id, professionalId: acceptedBid.professionalId,
+            clientUserId: auction.userId, rating, comment: comments[Math.floor(Math.random() * comments.length)],
           });
           reviewCount++;
         }
@@ -328,32 +316,22 @@ async function main() {
     }
   }
 
-  console.log(`  ✓ ${bidCount} offerte create`);
-  console.log(`  ✓ ${paymentCount} pagamenti creati`);
-  console.log(`  ✓ ${contractCount} contratti creati`);
-  console.log(`  ✓ ${reviewCount} recensioni create`);
+  console.log(`  ✓ ${bidCount} offerte (solo da pro della categoria giusta)`);
+  console.log(`  ✓ ${paymentCount} pagamenti, ${contractCount} contratti, ${reviewCount} recensioni`);
 
-  // Summary
-  const [summary] = await db.select({
+  const [s] = await db.select({
     totalUsers: sql<number>`(SELECT count(*)::int FROM users)`,
     totalPros: sql<number>`(SELECT count(*)::int FROM professionals)`,
     totalAuctions: sql<number>`(SELECT count(*)::int FROM auctions)`,
     totalBids: sql<number>`(SELECT count(*)::int FROM bids)`,
-    totalPayments: sql<number>`(SELECT count(*)::int FROM payments)`,
-    totalRevenue: sql<number>`COALESCE((SELECT sum(platform_fee_cents)::int FROM payments WHERE status = 'paid'), 0)`,
-    totalVolume: sql<number>`COALESCE((SELECT sum(final_amount_cents)::int FROM payments WHERE status = 'paid'), 0)`,
+    revenue: sql<number>`COALESCE((SELECT sum(platform_fee_cents)::int FROM payments WHERE status = 'paid'), 0)`,
+    volume: sql<number>`COALESCE((SELECT sum(final_amount_cents)::int FROM payments WHERE status = 'paid'), 0)`,
   }).from(sql`(SELECT 1) AS dummy`);
 
   console.log(`\n📊 Riepilogo:`);
-  console.log(`   Utenti: ${summary?.totalUsers}`);
-  console.log(`   Professionisti: ${summary?.totalPros}`);
-  console.log(`   Aste: ${summary?.totalAuctions}`);
-  console.log(`   Offerte: ${summary?.totalBids}`);
-  console.log(`   Pagamenti: ${summary?.totalPayments}`);
-  console.log(`   Volume transato: €${((summary?.totalVolume || 0) / 100).toLocaleString('it-IT')}`);
-  console.log(`   Revenue piattaforma (6%): €${((summary?.totalRevenue || 0) / 100).toLocaleString('it-IT')}`);
-  console.log(`\n✅ Demo seed completato!`);
-
+  console.log(`   Utenti: ${s?.totalUsers} | Pro: ${s?.totalPros} | Aste: ${s?.totalAuctions} | Offerte: ${s?.totalBids}`);
+  console.log(`   Volume: €${((s?.volume || 0) / 100).toLocaleString('it-IT')} | Revenue: €${((s?.revenue || 0) / 100).toLocaleString('it-IT')}`);
+  console.log(`\n✅ Seed completato!`);
   process.exit(0);
 }
 
