@@ -76,7 +76,7 @@ export default async function PublicAuctionsPage() {
             const coverPhoto = photos.length > 0 ? photos[0] : null;
 
             return (
-              <div key={a.id} className="card overflow-hidden group hover:border-[var(--primary)]/30 hover-lift transition-all">
+              <Link key={a.id} href={`/aste-pubbliche/${a.id}`} className="card overflow-hidden group hover:border-[var(--primary)]/30 hover-lift transition-all block">
                 {coverPhoto && (
                   <div className="relative aspect-[16/9] bg-[var(--border-light)] overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -129,7 +129,7 @@ export default async function PublicAuctionsPage() {
 
                 {/* Timer strip */}
                 <div className="h-[3px] bg-gradient-to-r from-amber-400 to-amber-300" />
-              </div>
+              </Link>
             );
           })}
         </div>
