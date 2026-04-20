@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { AppNavbar } from '@/components/layout/app-navbar';
+import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -15,9 +16,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <AppNavbar user={user} />
-      <main className="container-app py-6">
+      <main className="container-app py-6 pb-24 md:pb-6 animate-fade-in">
         {children}
       </main>
+      <MobileBottomNav role={user.role} />
     </div>
   );
 }

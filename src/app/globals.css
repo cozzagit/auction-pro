@@ -124,6 +124,84 @@ html { scroll-behavior: smooth; }
   50% { opacity: 0.6; }
 }
 
+/* Micro-animations */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.click-scale {
+  transition: transform 0.1s ease;
+}
+.click-scale:active {
+  transform: scale(0.97);
+}
+
+.btn {
+  transition: all 0.15s ease;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* Fade-in on mount */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Skeleton loader */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--border-light) 0%, var(--border) 50%, var(--border-light) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Live activity toast */
+.activity-toast {
+  animation: slideInUp 0.3s ease-out, fadeOut 0.3s ease-in 4.7s forwards;
+}
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateY(10px); }
+}
+
+/* Hide scrollbar */
+.scrollbar-hide { scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Safe area for mobile bottom nav */
+@supports (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Mobile bottom nav height reserve */
+@media (max-width: 767px) {
+  body.has-mobile-nav {
+    padding-bottom: 72px;
+  }
+}
+
 /* Responsive container */
 .container-app {
   max-width: 1200px;
