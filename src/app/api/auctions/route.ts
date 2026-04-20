@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const session = await getRequiredSession();
     const body = await request.json();
 
-    const { title, description, maxBudget, city, province, expiresAt, services: selectedServices } = body;
+    const { title, description, maxBudget, city, province, expiresAt, services: selectedServices, photos, documents } = body;
 
     if (!title || title.length < 5) {
       return NextResponse.json({ error: { code: 'VALIDATION_ERROR', message: 'Il titolo deve avere almeno 5 caratteri' } }, { status: 400 });
@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
         city: city?.trim() || null,
         province: province?.trim()?.toUpperCase() || null,
         expiresAt: expiresAt ? new Date(expiresAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        photos: Array.isArray(photos) ? photos : [],
+        documents: Array.isArray(documents) ? documents : [],
       })
       .returning();
 

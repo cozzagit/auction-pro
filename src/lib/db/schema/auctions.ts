@@ -16,6 +16,7 @@ export const auctions = pgTable(
     city: text('city'),
     province: text('province'),
     photos: jsonb('photos').$type<string[]>().default(sql`'[]'::jsonb`),
+    documents: jsonb('documents').$type<Array<{ name: string; url: string; size: number }>>().default(sql`'[]'::jsonb`),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     winningBidId: uuid('winning_bid_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { FileUploader } from '@/components/auction/file-uploader';
 
 interface Category { id: string; name: string; icon: string; color: string; slug: string; }
-interface Service { id: string; name: string; categoryId: string; }
+
+interface PhotoItem { url: string; name: string; size: number }
+interface DocItem { url: string; name: string; size: number }
 
 export default function CreateAuctionPage() {
   const router = useRouter();
@@ -19,6 +22,8 @@ export default function CreateAuctionPage() {
     daysToExpire: '7',
   });
   const [selectedServices, setSelectedServices] = useState<Array<{ serviceId: string; serviceName: string; categoryName: string; parameters: Record<string, unknown> }>>([]);
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [documents, setDocuments] = useState<DocItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -54,6 +59,8 @@ export default function CreateAuctionPage() {
           province: form.province,
           expiresAt: new Date(Date.now() + parseInt(form.daysToExpire) * 24 * 60 * 60 * 1000).toISOString(),
           services: selectedServices.map(s => ({ serviceId: s.serviceId, parameters: s.parameters })),
+          photos: photos.map(p => p.url),
+          documents,
         }),
       });
 
@@ -81,16 +88,16 @@ export default function CreateAuctionPage() {
 
       {/* Step indicator */}
       <div className="flex items-center gap-2">
-        {[1, 2].map(s => (
+        {[1, 2, 3].map(s => (
           <button
             key={s}
             onClick={() => setStep(s)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
               step === s ? 'bg-[var(--primary)] text-white' : 'bg-[var(--border-light)] text-[var(--muted)]'
             }`}
           >
             <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">{s}</span>
-            {s === 1 ? 'Dettagli' : 'Servizi'}
+            {s === 1 ? 'Dettagli' : s === 2 ? 'Servizi' : 'Allegati'}
           </button>
         ))}
       </div>
@@ -226,6 +233,33 @@ export default function CreateAuctionPage() {
 
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep(1)} className="btn btn-outline flex-1 py-3">
+                ← Indietro
+              </button>
+              <button type="button" onClick={() => setStep(3)} className="btn btn-primary flex-1 py-3">
+                Avanti — Allegati (opz.)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="card p-6 space-y-4">
+            <div>
+              <h2 className="font-bold text-[var(--foreground)] mb-1">Foto e documenti</h2>
+              <p className="text-sm text-[var(--muted)]">
+                Aggiungi foto o documenti per aiutare i professionisti a fare offerte piu precise. Opzionale ma consigliato.
+              </p>
+            </div>
+
+            <FileUploader
+              photos={photos}
+              documents={documents}
+              onPhotosChange={setPhotos}
+              onDocsChange={setDocuments}
+            />
+
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setStep(2)} className="btn btn-outline flex-1 py-3">
                 ← Indietro
               </button>
               <button type="submit" disabled={loading} className="btn btn-primary flex-1 py-3 disabled:opacity-50">

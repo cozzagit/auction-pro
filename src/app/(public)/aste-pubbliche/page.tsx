@@ -15,6 +15,8 @@ export default async function PublicAuctionsPage() {
       status: auctions.status,
       expiresAt: auctions.expiresAt,
       createdAt: auctions.createdAt,
+      photos: auctions.photos,
+      documents: auctions.documents,
       creatorFirstName: users.firstName,
       bidCount: sql<number>`(SELECT count(*)::int FROM bids WHERE auction_id = ${auctions.id})`,
       lowestBid: sql<number | null>`(SELECT min(amount_cents) FROM bids WHERE auction_id = ${auctions.id})`,
@@ -69,18 +71,36 @@ export default async function PublicAuctionsPage() {
           {activeAuctions.map(a => {
             const location = [a.city, a.province].filter(Boolean).join(', ');
             const savings = a.lowestBid ? Math.round(((a.maxBudget - a.lowestBid) / a.maxBudget) * 100) : null;
+            const photos = (a.photos as string[]) || [];
+            const docs = (a.documents as Array<{name:string}>) || [];
+            const coverPhoto = photos.length > 0 ? photos[0] : null;
 
             return (
-              <div key={a.id} className="card overflow-hidden group hover:border-[var(--primary)]/30 transition-all">
+              <div key={a.id} className="card overflow-hidden group hover:border-[var(--primary)]/30 hover-lift transition-all">
+                {coverPhoto && (
+                  <div className="relative aspect-[16/9] bg-[var(--border-light)] overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={coverPhoto} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    {photos.length > 1 && (
+                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold backdrop-blur">+{photos.length - 1} foto</span>
+                    )}
+                  </div>
+                )}
                 <div className="p-5">
                   <h3 className="font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors mb-2 line-clamp-2">
                     {a.title}
                   </h3>
                   <p className="text-sm text-[var(--muted)] line-clamp-2 mb-3">{a.description}</p>
 
-                  <div className="flex items-center gap-3 text-xs text-[var(--muted)] mb-3">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted)] mb-3">
                     {location && <span>📍 {location}</span>}
                     <span>👤 {a.creatorFirstName}</span>
+                    {!coverPhoto && photos.length > 0 && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 font-medium">📷 {photos.length}</span>
+                    )}
+                    {docs.length > 0 && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 font-medium">📎 {docs.length}</span>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between">

@@ -6,6 +6,7 @@ import { auth } from '@/lib/auth';
 import { formatCurrency } from '@/lib/utils/pricing';
 import { CountdownTimer } from '@/components/auction/countdown-timer';
 import { BidPanel } from '@/components/auction/bid-panel';
+import { PhotoGallery } from '@/components/auction/photo-gallery';
 import Link from 'next/link';
 
 export default async function AuctionDetailPage({
@@ -97,6 +98,35 @@ export default async function AuctionDetailPage({
           )}
         </div>
       </div>
+
+      {/* Photos */}
+      {auction.photos && (auction.photos as string[]).length > 0 && (
+        <div className="card p-6">
+          <h2 className="text-lg font-bold text-[var(--foreground)] mb-3">📷 Foto ({(auction.photos as string[]).length})</h2>
+          <PhotoGallery photos={auction.photos as string[]} />
+        </div>
+      )}
+
+      {/* Documents */}
+      {auction.documents && (auction.documents as Array<{name:string;url:string;size:number}>).length > 0 && (
+        <div className="card p-6">
+          <h2 className="text-lg font-bold text-[var(--foreground)] mb-3">📄 Documenti</h2>
+          <div className="space-y-2">
+            {(auction.documents as Array<{name:string;url:string;size:number}>).map((doc, i) => (
+              <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-xl bg-[var(--border-light)] border border-[var(--border)] hover:border-[var(--primary)] transition-colors group">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xl shrink-0">📄</span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-[var(--foreground)] truncate group-hover:text-[var(--primary)]">{doc.name}</div>
+                    <div className="text-xs text-[var(--muted)]">{doc.size < 1024 * 1024 ? `${(doc.size / 1024).toFixed(0)}KB` : `${(doc.size / 1024 / 1024).toFixed(1)}MB`}</div>
+                  </div>
+                </div>
+                <span className="shrink-0 text-xs text-[var(--primary)] font-medium">⬇ Scarica</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Services */}
       {auctionSvcs.length > 0 && (

@@ -4,6 +4,7 @@ import { eq, asc } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils/pricing';
 import { CountdownTimer } from '@/components/auction/countdown-timer';
+import { PhotoGallery } from '@/components/auction/photo-gallery';
 import Link from 'next/link';
 import { AuctionAdminActions } from './actions';
 
@@ -110,6 +111,33 @@ export default async function AdminAuctionDetailPage({ params }: { params: Promi
 
       {/* ═══ ADMIN ACTIONS ═══ */}
       <AuctionAdminActions auctionId={auction.id} status={auction.status} />
+
+      {/* Photos + Documents */}
+      {(auction.photos && (auction.photos as string[]).length > 0) && (
+        <div className="card p-6">
+          <h2 className="text-lg font-bold mb-3">📷 Foto ({(auction.photos as string[]).length})</h2>
+          <PhotoGallery photos={auction.photos as string[]} />
+        </div>
+      )}
+      {(auction.documents && (auction.documents as Array<{name:string;url:string;size:number}>).length > 0) && (
+        <div className="card p-6">
+          <h2 className="text-lg font-bold mb-3">📄 Documenti</h2>
+          <div className="space-y-2">
+            {(auction.documents as Array<{name:string;url:string;size:number}>).map((doc, i) => (
+              <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 rounded-xl bg-[var(--border-light)] hover:bg-blue-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📄</span>
+                  <div>
+                    <div className="text-sm font-medium">{doc.name}</div>
+                    <div className="text-xs text-[var(--muted)]">{(doc.size / 1024).toFixed(0)}KB</div>
+                  </div>
+                </div>
+                <span className="text-xs text-[var(--primary)] font-medium">⬇</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ═══ PRICING ═══ */}
       {bestBid && (
